@@ -26,3 +26,5 @@ void Gui::set_up_bat_info(lv_obj_t *parent) {
     lv_obj_align(bat_state_label, LV_ALIGN_BOTTOM_LEFT, 0, -25);
     lv_label_set_text(bat_state_label, "State:Charg");
 }
+
+

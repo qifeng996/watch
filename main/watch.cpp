@@ -5,25 +5,25 @@
 #include "Gui.h"
 #include "Wifi.h"
 #include "MsgController.h"
-
+#include "audio.h"
 void Task(void *arg) {
     msgController = new Msg_Controller();
     hardWare = new HardWare();
     gui =new Gui();
-    Wifi wifi = Wifi();
+    auto wifi = Wifi();
+    audio = new Audio();
     hardWare->PMU_init();
     hardWare->Drv2605_init();
     hardWare->LCD_init();
     gui->main_page();
     wifi.wifi_init();
+    audio->init();
     start_webserver();
-    ESP_LOGI("charge","send event1");
     while (true) {
-        ESP_LOGI("charge","send event2");
         HardWare::batteryPercent = hardWare->PMU.getBatteryPercent();
         if (lvgl_port_lock(5)){
-            lv_bar_set_value(gui->bat_percent_bar,HardWare::batteryPercent,LV_ANIM_ON);
-            lv_label_set_text_fmt(gui->bat_percent_label,"Percent:%d%%",(int)HardWare::batteryPercent);
+            lv_bar_set_value(gui->bat_percent_bar,static_cast<int>(HardWare::batteryPercent),LV_ANIM_ON);
+            lv_label_set_text_fmt(gui->bat_percent_label,"Percent:%d%%",static_cast<int>(HardWare::batteryPercent));
             lvgl_port_unlock();
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
