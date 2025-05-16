@@ -9,8 +9,9 @@ idf_component_register(SRCS
         "gui/wifi_info.cpp"
         "gui/bat_info.cpp"
         "gui/alert.cpp"
+        "gui/data_info.cpp"
         "audio.cpp"
-        INCLUDE_DIRS "." "include" "gui"
+        INCLUDE_DIRS "." "include"
         EMBED_TXTFILES audio/gs-16b-1c-44100hz.mp3)
 
 lvgl_port_create_c_image("images/esp_logo.png" "images/" "ARGB8888" "NONE")

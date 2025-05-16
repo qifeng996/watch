@@ -75,6 +75,21 @@ void Msg_Controller::msg_task(void* arg)
             gui->set_up_alert();
             ESP_LOGI("MSG Controller", "Alert");
             break;
+        case Msg::DataUpdate: {
+            Msg_DataUpdate *msgDataUpdate = static_cast<Msg_DataUpdate *>(msg);
+            if (msgDataUpdate->isAlert()) {
+                if (!self->alerted){
+                    self->alerted = true;
+                    gui->set_up_alert();
+                    ESP_LOGI("MSG Controller", "alert");
+                }
+            }else{
+                self->alerted = false;
+                ESP_LOGI("MSG Controller", "no alert");
+            }
+            gui->set_data(msgDataUpdate->data);
+            break;
+        }
         }
         delete msg;
     }

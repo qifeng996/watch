@@ -20,8 +20,18 @@ Wifi::~Wifi() = default;
 void udp_recv_cb(void* arg, struct udp_pcb* pcb, struct pbuf* p,
                  const ip_addr_t* addr, u16_t port)
 {
-    ESP_LOGI("UDP", "RECVED");
-    msgController->push_msg(new Msg(Msg::Alter));
+    ESP_LOGI("UDP", "Received UDP packet from %s:%d, length: %d",
+             ipaddr_ntoa(addr), port, p->len);
+
+    // ´òÓ¡Ô­Ê¼Êı¾İÎªÊ®Áù½øÖÆ
+    char hex_buf[512] = {0};
+    int len = p->len > sizeof(hex_buf) / 3 ? sizeof(hex_buf) / 3 : p->len;
+    for (int i = 0; i < len; ++i) {
+        sprintf(hex_buf + i * 3, "%02X ", ((uint8_t*)p->payload)[i]);
+    }
+    ESP_LOG_BUFFER_HEXDUMP("UDP", p->payload, p->len, ESP_LOG_INFO);
+//    msgController->push_msg(new Msg(Msg::Alter));
+    msgController->push_msg(new Msg_DataUpdate((uint8_t *)p->payload));
     pbuf_free(p);
 }
 
@@ -51,11 +61,11 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     {
         auto* event = (ip_event_got_ip_t*)event_data;
         ESP_LOGI("WIFI", "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
-        msgController->push_msg(new Msg_WifiConnect("192.168.9.1"));
+        msgController->push_msg(new Msg_WifiConnect("192.168.1.100"));
         s_retry_num = 0;
         udp_init();
         udp_pcb = udp_new();
-        udp_bind(udp_pcb,IP_ADDR_ANY, 8080);
+        udp_bind(udp_pcb,IP_ADDR_ANY, 1235);
         udp_recv(udp_pcb, udp_recv_cb, nullptr);
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
@@ -97,13 +107,13 @@ esp_err_t Wifi::wifi_init()
 static auto html_form = R"(
   <html>
     <body>
-      <h1>WiFi é…ç½®</h1>
+      <h1>WiFi ÅäÖÃ</h1>
       <form action="/set_wifi" method="POST">
         <label for="ssid">WiFi SSID:</label><br>
         <input type="text" id="ssid" name="ssid"><br>
-        <label for="password">WiFi å¯†ç :</label><br>
+        <label for="password">WiFi ÃÜÂë:</label><br>
         <input type="password" id="password" name="password"><br><br>
-        <input type="submit" value="æäº¤">
+        <input type="submit" value="Ìá½»">
       </form>
     </body>
   </html>
@@ -125,10 +135,10 @@ esp_err_t handle_set_wifi(httpd_req_t* req)
     }
     else
     {
-        content[ret] = '\0'; // ç¡®ä¿å­—ç¬¦ä¸²ä»¥ `\0` ç»“å°¾
+        content[ret] = '\0'; // È·±£×Ö·û´®ÒÔ `\0` ½áÎ²
         ESP_LOGI("HTTP", "Received Data: %s", content);
     }
-    // ä» HTTP è¡¨å•ä¸­è·å– SSID å’Œå¯†ç 
+    // ´Ó HTTP ±íµ¥ÖĞ»ñÈ¡ SSID ºÍÃÜÂë
     char ssid[32] = {0};
     char password[64] = {0};
 
@@ -157,9 +167,9 @@ esp_err_t handle_set_wifi(httpd_req_t* req)
     }
     esp_wifi_disconnect();
 
-    // ç­‰å¾…è¿æ¥æ–­å¼€å®Œæˆ
+    // µÈ´ıÁ¬½Ó¶Ï¿ªÍê³É
 
-    // **é…ç½® WiFi STA å¹¶å°è¯•è¿æ¥**
+    // **ÅäÖÃ WiFi STA ²¢³¢ÊÔÁ¬½Ó**
     wifi_config_t wifi_config = {};
     strncpy((char*)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid) - 1);
     strncpy((char*)wifi_config.sta.password, password, sizeof(wifi_config.sta.password) - 1);
@@ -172,36 +182,36 @@ esp_err_t handle_set_wifi(httpd_req_t* req)
                                            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
                                            pdFALSE,
                                            pdFALSE,
-                                           15000 / portTICK_PERIOD_MS); // 15 ç§’è¶…æ—¶
+                                           15000 / portTICK_PERIOD_MS); // 15 Ãë³¬Ê±
     if (bits & WIFI_CONNECTED_BIT)
     {
         ESP_LOGI("WIFI", "WiFi Connected!");
-        httpd_resp_send(req, "WiFi è¿æ¥æˆåŠŸï¼è®¾å¤‡å·²è”ç½‘", HTTPD_RESP_USE_STRLEN);
+        httpd_resp_send(req, "WiFi Á¬½Ó³É¹¦£¡Éè±¸ÒÑÁªÍø", HTTPD_RESP_USE_STRLEN);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
         ESP_LOGE("WIFI", "WiFi Connection Failed");
-        httpd_resp_send(req, "WiFi è¿æ¥å¤±è´¥ï¼Œè¯·æ£€æŸ¥ SSID å’Œå¯†ç ", HTTPD_RESP_USE_STRLEN);
+        httpd_resp_send(req, "WiFi Á¬½ÓÊ§°Ü£¬Çë¼ì²é SSID ºÍÃÜÂë", HTTPD_RESP_USE_STRLEN);
         return ESP_FAIL;
     }
     else
     {
         ESP_LOGE("WIFI", "WiFi Connection Timeout");
-        httpd_resp_send(req, "WiFi è¿æ¥è¶…æ—¶ï¼Œè¯·é‡è¯•", HTTPD_RESP_USE_STRLEN);
+        httpd_resp_send(req, "WiFi Á¬½Ó³¬Ê±£¬ÇëÖØÊÔ", HTTPD_RESP_USE_STRLEN);
         return ESP_FAIL;
     }
 
-    // **æˆåŠŸè¿æ¥åï¼Œå»¶è¿Ÿå‡ ç§’å†å…³é—­ APï¼Œç¡®ä¿æ‰‹æœºæ”¶åˆ° HTTP å“åº”**
+    // **³É¹¦Á¬½Óºó£¬ÑÓ³Ù¼¸ÃëÔÙ¹Ø±Õ AP£¬È·±£ÊÖ»úÊÕµ½ HTTP ÏìÓ¦**
     vTaskDelay(3000 / portTICK_PERIOD_MS);
     ESP_LOGI("WIFI", "Disabling AP mode...");
-    // **ç­‰å¾… WiFi è¿æ¥ç»“æœ**
+    // **µÈ´ı WiFi Á¬½Ó½á¹û**
     return ESP_OK;
 }
 
 httpd_handle_t start_webserver()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.uri_match_fn = httpd_uri_match_wildcard; // å…è®¸ URI é€šé…ç¬¦åŒ¹é…
+    config.uri_match_fn = httpd_uri_match_wildcard; // ÔÊĞí URI Í¨Åä·ûÆ¥Åä
     httpd_handle_t server = nullptr;
     if (httpd_start(&server, &config) == ESP_OK)
     {

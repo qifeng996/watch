@@ -48,6 +48,7 @@ void Gui::main_page() {
         lv_image_set_src(logo, &code);
         lv_obj_center(logo);
         this->set_up_bat_info(t2);
+        this->set_up_data_info(t3);
         lv_obj_t *setting = lv_obj_create(t4);
         lv_obj_set_height(setting, LV_PCT(100));
         lv_obj_set_flex_grow(setting, 1);
@@ -58,3 +59,5 @@ void Gui::main_page() {
         lvgl_port_unlock();
     }
 }
+
+

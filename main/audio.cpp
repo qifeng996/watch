@@ -96,7 +96,7 @@ void Audio::init()
         .clk_set_fn = bsp_i2s_reconfig_clk,
         .write_fn = bsp_i2s_write,
         .priority = 0,
-        .coreID = 0
+        .coreID = 0,
     };
 
     audio_player_new(config);
